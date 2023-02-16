@@ -34,6 +34,16 @@ const WhatsappWeb = ({ socket }) => {
       debugger;
       setClients(updatedClients);
     });
+
+    socket.on("message", (data) => {
+      debugger;
+      console.log(data);
+    });
+
+    socket.on("newmessage", (data) => {
+      debugger;
+      console.log(data);
+    });
   }, [clientRef, clients, socket]);
 
   useEffect(() => {
@@ -51,6 +61,45 @@ const WhatsappWeb = ({ socket }) => {
       .then((data) => {
         console.log(data);
       });
+  };
+
+  const getAllMessagesHandler = (id) => {
+    fetch(
+      "http://localhost:3001/getAllChatsOfGroup/" + id + "/randomGroupName",
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "GET",
+      }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data);
+      });
+  };
+
+  const getMessageInfoHandler = (id) => {
+    try {
+      fetch(
+        "http://localhost:3001/getMessageInfo/" +
+          id +
+          "/groupname" +
+          "/B4E8ADBD03D1BF9377C9036102AEC9A1",
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          method: "GET",
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          console.log(data);
+        });
+    } catch (error) {
+      console.log(error);
+    }
   };
   const handleAddClient = () => {
     const clientId = document.getElementById("client-id").value;
@@ -112,6 +161,17 @@ const WhatsappWeb = ({ socket }) => {
               {client?.ready && (
                 <button onClick={() => getAllChatsHandler(client.id)}>
                   Get All Chats
+                </button>
+              )}
+
+              {client?.ready && (
+                <button onClick={() => getAllMessagesHandler(client.id)}>
+                  Get All Message of group
+                </button>
+              )}
+              {client?.ready && (
+                <button onClick={() => getMessageInfoHandler(client.id)}>
+                  Get Message Info
                 </button>
               )}
             </div>

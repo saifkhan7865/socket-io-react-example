@@ -77,16 +77,16 @@ const createSession = function (id, description, socket) {
   client.on("qr", (qr) => {
     console.log("QR RECEIVED", qr);
 
-    socket.emit("qr", { id: id, src: qr });
-    socket.emit("message", {
+    io.to(id).emit("qr", { id: id, src: qr });
+    io.to(id).emit("message", {
       id: id,
       text: "QR Code received, scan please!",
     });
   });
 
   client.on("ready", () => {
-    socket.emit("ready", { id: id });
-    socket.emit("message", { id: id, text: "Whatsapp is ready!" });
+    io.to(id).emit("ready", { id: id });
+    io.to(id).emit("message", { id: id, text: "Whatsapp is ready!" });
 
     // const savedSessions = getSessionsFile();
     const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
@@ -95,16 +95,16 @@ const createSession = function (id, description, socket) {
   });
 
   client.on("authenticated", () => {
-    socket.emit("authenticated", { id: id });
-    socket.emit("message", { id: id, text: "Whatsapp is authenticated!" });
+    io.to(id).emit("authenticated", { id: id });
+    io.to(id).emit("message", { id: id, text: "Whatsapp is authenticated!" });
   });
 
   client.on("auth_failure", function () {
-    socket.emit("message", { id: id, text: "Auth failure, restarting..." });
+    io.to(id).emit("message", { id: id, text: "Auth failure, restarting..." });
   });
 
   client.on("disconnected", (reason) => {
-    socket.emit("message", { id: id, text: "Whatsapp is disconnected!" });
+    io.to(id).emit("message", { id: id, text: "Whatsapp is disconnected!" });
     client.destroy();
     // client.initialize();
 
@@ -180,6 +180,9 @@ io.on("connection", (socket) => {
 
   socket.on("create-session", function (data) {
     console.log("Create session: " + data.id);
+    socket.join(data.id);
+    io.to(data.id).emit("newmessage", "Hello from server");
+
     createSession(data.id, data.description, socket);
   });
 });
@@ -196,6 +199,49 @@ app.get("/getChats/:sessionid", async (req, res) => {
   }
 });
 
+app.get("/getAllChatsOfGroup/:sessionid/:nameOfTheGroup", async (req, res) => {
+  try {
+    const nameOfTheGroup = req.params.nameOfTheGroup;
+    const sessionid = req.params.sessionid;
+    const groupid = req.params.groupid;
+    const session = sessions.find((sess) => sess.id == sessionid);
+    const client = session.client;
+    const chats = await client.getChats();
+    // TODO: later on use the name of the group from the frontend
+    const group = chats.find((chat) => chat.name == "Boys Fam 🤩");
+    const groupChats = await group.fetchMessages();
+    res.send(groupChats);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.get(
+  "/getMessageInfo/:sessionid/:groupname/:messageid",
+  async (req, res) => {
+    try {
+      const sessionid = req.params.sessionid;
+      const groupname = req.params.groupname;
+      const messageid = req.params.messageid;
+      const session = sessions.find((sess) => sess.id == sessionid);
+      const client = session.client;
+      const chats = await client.getChats();
+
+      const group = chats.find((chat) => chat.name == "Boys Fam 🤩");
+
+      const groupChats = await group.fetchMessages();
+      const message = groupChats.find((msg) => msg.id.id == messageid);
+
+      const messageInfo = await message.getInfo();
+      res.send(messageInfo);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+);
+
 server.listen(3001, () => {
   console.log("SERVER IS RUNNING");
 });
+
+app.get("getMessageInfo");
