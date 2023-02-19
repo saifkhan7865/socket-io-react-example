@@ -7,8 +7,10 @@ const WhatsappWeb = ({ socket }) => {
   const [qrCode, setQrCode] = useState("");
   const [connected, setConnected] = useState(false);
   const [getAllChats, setAllChats] = useState([]);
+  const [allGroups, setAllgroups] = useState([]);
 
-  console.log(clients);
+  const [selectedGroup, setSelectedGroup] = useState();
+  const [activeSession, setActiveSession] = useState();
   useEffect(() => {
     socket.on("init", (data) => {
       console.log("hello", data);
@@ -23,7 +25,6 @@ const WhatsappWeb = ({ socket }) => {
     socket.on("ready", (data) => {
       console.log(data);
 
-      debugger;
       console.log(clientRef);
       console.log(clientRef.current);
       const updatedClients = [...clientRef.current];
@@ -31,17 +32,15 @@ const WhatsappWeb = ({ socket }) => {
         (client) => client.id === data.id
       );
       updatedClients[clientIndex].ready = true;
-      debugger;
+
       setClients(updatedClients);
     });
 
     socket.on("message", (data) => {
-      debugger;
       console.log(data);
     });
 
     socket.on("newmessage", (data) => {
-      debugger;
       console.log(data);
     });
   }, [clientRef, clients, socket]);
@@ -51,6 +50,7 @@ const WhatsappWeb = ({ socket }) => {
   }, [clients]);
 
   const getAllChatsHandler = (id) => {
+    setActiveSession(id);
     fetch("http://localhost:3001/getChats/" + id, {
       headers: {
         "Content-Type": "application/json",
@@ -60,9 +60,13 @@ const WhatsappWeb = ({ socket }) => {
       .then((res) => res.json())
       .then((data) => {
         console.log(data);
+        setAllgroups(data);
       });
   };
 
+  console.log(allGroups);
+
+  console.log(selectedGroup);
   const getAllMessagesHandler = (id) => {
     fetch(
       "http://localhost:3001/getAllChatsOfGroup/" + id + "/randomGroupName",
@@ -123,6 +127,25 @@ const WhatsappWeb = ({ socket }) => {
       description: clientDescription,
     });
   };
+
+  const connectGroupToUsersAccount = () => {
+    fetch(
+      "http://localhost:3001/connectGroupToUsersAccount/" +
+        activeSession +
+        "/" +
+        selectedGroup,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "GET",
+      }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data);
+      });
+  };
   return (
     <div>
       {" "}
@@ -178,6 +201,29 @@ const WhatsappWeb = ({ socket }) => {
           ))}
         </div>
 
+        {allGroups.length > 0 && (
+          <div>
+            <select
+              value={selectedGroup}
+              onChange={(e) => {
+                setSelectedGroup(e.target.value);
+              }}
+            >
+              {allGroups.map((group) => (
+                <option key={group.id._serialized} value={group.id._serialized}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {selectedGroup && (
+          <div>
+            <button onClick={() => connectGroupToUsersAccount()}>
+              Get All Message of group
+            </button>
+          </div>
+        )}
         <div>{qrCode && <QRCode value={qrCode} />}</div>
       </div>
     </div>

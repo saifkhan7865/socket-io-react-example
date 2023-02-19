@@ -1,0 +1,53 @@
+2023/02/17-18:35:42.291 f103 Reusing MANIFEST /Users/mohammedkhan/Documents/GitHub/socket-io-react-example/server/.wwebjs_auth/RemoteAuth-saifconnections/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2023/02/17-18:35:42.291 f103 Recovering log #992
+2023/02/17-18:35:42.355 f103 Reusing old log /Users/mohammedkhan/Documents/GitHub/socket-io-react-example/server/.wwebjs_auth/RemoteAuth-saifconnections/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000992.log 
+2023/02/17-18:35:53.887 a503 Level-0 table #1021: started
+2023/02/17-18:35:53.907 a503 Level-0 table #1021: 1152750 bytes OK
+2023/02/17-18:35:53.915 a503 Delete type=0 #992
+2023/02/17-18:35:53.917 a503 Compacting 1@0 + 1@1 files
+2023/02/17-18:35:53.939 a503 Generated table #1022@0: 18335 keys, 429843 bytes
+2023/02/17-18:35:53.946 a503 Generated table #1023@0: 2447 keys, 145913 bytes
+2023/02/17-18:35:53.950 a503 Generated table #1024@0: 225 keys, 6724 bytes
+2023/02/17-18:35:53.950 a503 Compacted 1@0 + 1@1 files => 582480 bytes
+2023/02/17-18:35:53.958 a503 compacted to: files[ 0 3 38 0 0 0 0 ]
+2023/02/17-18:35:53.959 a503 Delete type=2 #1021
+2023/02/17-18:35:53.959 a503 Delete type=2 #996
+2023/02/17-18:35:55.015 13707 Compacting 1@1 + 10@2 files
+2023/02/17-18:35:55.066 13707 Generated table #1025@1: 61259 keys, 2241895 bytes
+2023/02/17-18:35:55.086 13707 Generated table #1026@1: 3208 keys, 2162027 bytes
+2023/02/17-18:35:55.106 13707 Generated table #1027@1: 3372 keys, 2157701 bytes
+2023/02/17-18:35:55.125 13707 Generated table #1028@1: 2998 keys, 2164473 bytes
+2023/02/17-18:35:55.141 13707 Generated table #1029@1: 1971 keys, 2143995 bytes
+2023/02/17-18:35:55.160 13707 Generated table #1030@1: 3313 keys, 2167240 bytes
+2023/02/17-18:35:55.178 13707 Generated table #1031@1: 3160 keys, 2159093 bytes
+2023/02/17-18:35:55.199 13707 Generated table #1032@1: 3967 keys, 2170818 bytes
+2023/02/17-18:35:55.236 13707 Generated table #1033@1: 28000 keys, 2211534 bytes
+2023/02/17-18:35:55.286 13707 Generated table #1034@1: 24926 keys, 2279465 bytes
+2023/02/17-18:35:55.295 13707 Generated table #1035@1: 2023 keys, 185066 bytes
+2023/02/17-18:35:55.295 13707 Compacted 1@1 + 10@2 files => 22043307 bytes
+2023/02/17-18:35:55.307 13707 compacted to: files[ 0 2 39 0 0 0 0 ]
+2023/02/17-18:35:55.308 13707 Delete type=2 #1022
+2023/02/17-18:35:55.308 13707 Delete type=2 #997
+2023/02/17-18:35:55.308 13707 Delete type=2 #998
+2023/02/17-18:35:55.308 13707 Delete type=2 #999
+2023/02/17-18:35:55.308 13707 Delete type=2 #1003
+2023/02/17-18:35:55.308 13707 Delete type=2 #1002
+2023/02/17-18:35:55.308 13707 Delete type=2 #1000
+2023/02/17-18:35:55.308 13707 Delete type=2 #1001
+2023/02/17-18:35:55.308 13707 Delete type=2 #1005
+2023/02/17-18:35:55.308 13707 Delete type=2 #1004
+2023/02/17-18:35:55.308 13707 Delete type=2 #1006
+2023/02/17-18:35:55.967 1f307 Compacting 1@1 + 10@2 files
+2023/02/17-18:35:56.012 1f307 Generated table #1036@1: 25323 keys, 2271279 bytes
+2023/02/17-18:35:56.055 1f307 Generated table #1037@1: 27317 keys, 2254496 bytes
+2023/02/17-18:35:56.078 1f307 Generated table #1038@1: 9506 keys, 2141151 bytes
+2023/02/17-18:35:56.100 1f307 Generated table #1039@1: 9328 keys, 2132906 bytes
+2023/02/17-18:35:56.137 1f307 Generated table #1040@1: 51216 keys, 2183123 bytes
+2023/02/17-18:35:56.200 1f307 Generated table #1041@1: 103882 keys, 2255891 bytes
+2023/02/17-18:35:56.262 1f307 Generated table #1042@1: 101461 keys, 2252036 bytes
+2023/02/17-18:35:56.323 1f307 Generated table #1043@1: 101029 keys, 2251979 bytes
+2023/02/17-18:35:56.386 1f307 Generated table #1044@1: 101761 keys, 2252334 bytes
+2023/02/17-18:35:56.449 1f307 Generated table #1045@1: 102496 keys, 2252612 bytes
+2023/02/17-18:35:56.454 1f307 Generated table #1046@1: 1335 keys, 29052 bytes
+2023/02/17-18:35:56.454 1f307 Compacted 1@1 + 10@2 files => 22276859 bytes
+2023/02/17-18:35:56.462 1f307 compacted to: files[ 0 1 40 0 0 0 0 ]

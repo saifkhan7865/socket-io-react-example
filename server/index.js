@@ -4,10 +4,32 @@ const fs = require("fs");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-const { Client, MessageMedia, LocalAuth } = require("whatsapp-web.js");
+const {
+  Client,
+  MessageMedia,
+  LocalAuth,
+  RemoteAuth,
+} = require("whatsapp-web.js");
+const { MongoStore } = require("wwebjs-mongo");
+const mongoose = require("mongoose");
+const { sessionsModel } = require("./sessionsModel");
+const { listenToObjects } = require("./listenToMessages");
 app.use(cors());
-
+const MONG_URI = "mongodb+srv://Saif:Arhaan123@cluster0.mj6hd.mongodb.net/test";
+mongoose.set("strictQuery", false);
+mongoose.connect(MONG_URI);
+let sessions = [];
 const server = http.createServer(app);
+let store;
+mongoose.connection.on("connected", () => {
+  console.log("connected to mongo");
+  store = new MongoStore({ mongoose: mongoose });
+  const mongoSessions = sessionsModel.find().lean();
+  if (mongoSessions.length > 0) {
+    sessions = [...mongoSessions];
+  }
+  init();
+});
 
 const io = new Server(server, {
   cors: {
@@ -15,44 +37,74 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
-const sessions = [];
+
 const SESSIONS_FILE = "./whatsapp-sessions.json";
-
-const createSessionsFileIfNotExists = function () {
-  if (!fs.existsSync(SESSIONS_FILE)) {
-    try {
-      fs.writeFileSync(SESSIONS_FILE, JSON.stringify([]));
-      console.log("Sessions file created successfully.");
-    } catch (err) {
-      console.log("Failed to create sessions file: ", err);
-    }
-  }
-};
-
-createSessionsFileIfNotExists();
 
 const setSessionsFile = function (newsession) {
   sessions.push(newsession);
-  // fs.writeFile(SESSIONS_FILE, JSON.stringify(sessions), function (err) {
-  //   // console.log("hello");
-  //   // if (err) {
-  //   //   console.log(err);
-  //   // } else {
-  //   //   console.log("Sessions file updated successfully.");
-  //   // }
-  // });
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
+};
+
+const createOrUpdateSessionOnRemote = async (id, status, client, type) => {
+  try {
+    if (type === "delete") {
+      const sessions = await sessionsModel.deleteOne({ id: id });
+      console.log("session is deleted");
+    }
+    const existingSession = await sessionsModel.find({ id: id });
+
+    if (existingSession.length === 0) {
+      console.log("creating session");
+      const sessions = await sessionsModel.create({
+        id: id,
+        status: status,
+      });
+      console.log(sessions + "session is created");
+    } else {
+      // update session
+      const updatedSession = await sessionsModel.findOneAndUpdate(
+        {
+          id: id,
+        },
+        {
+          $set: {
+            status: status,
+          },
+        }
+      );
+
+      console.log("session is updated", existingSession);
+    }
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 const getSessionsFile = function () {
   try {
-    return JSON.parse(fs.readFileSync(SESSIONS_FILE));
+    const sessions = sessionsModel.find().lean();
+    return sessions;
   } catch (err) {
     console.log(err);
     return [];
   }
 };
-const createSession = function (id, description, socket) {
-  console.log("Creating session: " + id);
+const getSessionsRemote = async function () {
+  try {
+    const sessions = await sessionsModel.find().lean();
+    return sessions;
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
+};
+const createSession = async function (id, description, socket) {
+  const sessionsExistsLocally = sessions.filter((session) => session.id === id);
+  if (sessionsExistsLocally.length > 0) {
+    console.log("session already exists locally");
+    io.to(id).emit("ready", { id: id });
+    return;
+  }
   const client = new Client({
     restartOnAuthFail: true,
     puppeteer: {
@@ -67,8 +119,10 @@ const createSession = function (id, description, socket) {
         "--disable-gpu",
       ],
     },
-    authStrategy: new LocalAuth({
+    authStrategy: new RemoteAuth({
       clientId: id,
+      store: store,
+      backupSyncIntervalMs: 300000,
     }),
   });
 
@@ -76,7 +130,7 @@ const createSession = function (id, description, socket) {
 
   client.on("qr", (qr) => {
     console.log("QR RECEIVED", qr);
-
+    createOrUpdateSessionOnRemote(id, "pending", client, null);
     io.to(id).emit("qr", { id: id, src: qr });
     io.to(id).emit("message", {
       id: id,
@@ -85,62 +139,74 @@ const createSession = function (id, description, socket) {
   });
 
   client.on("ready", () => {
+    console.log("Whatsapp is ready!");
     io.to(id).emit("ready", { id: id });
     io.to(id).emit("message", { id: id, text: "Whatsapp is ready!" });
-
-    // const savedSessions = getSessionsFile();
-    const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
-    savedSessions[sessionIndex].ready = true;
-    // setSessionsFile(savedSessions);
   });
 
-  client.on("authenticated", () => {
+  client.on("authenticated", async () => {
     io.to(id).emit("authenticated", { id: id });
     io.to(id).emit("message", { id: id, text: "Whatsapp is authenticated!" });
+    createOrUpdateSessionOnRemote(id, "connected", client, null);
+    sessions.push({
+      id: id,
+      client: client,
+    });
+    const mongoSessions = await sessionsModel.find().lean();
+    if (mongoSessions.length > 0) {
+      //  add the field groupid to the existing sessions by comparing the id
+      let cacheSessions = sessions.map((session) => {
+        const mongoSession = mongoSessions.find(
+          (mongoSession) => mongoSession.id === session.id
+        );
+        if (mongoSession) {
+          session.groupid = mongoSession?.groupid ?? "";
+        }
+        return session;
+      });
+      listenToObjects(mongoose, sessions);
+    }
   });
 
   client.on("auth_failure", function () {
     io.to(id).emit("message", { id: id, text: "Auth failure, restarting..." });
+    createOrUpdateSessionOnRemote(id, "connected", client, "delete");
   });
 
   client.on("disconnected", (reason) => {
     io.to(id).emit("message", { id: id, text: "Whatsapp is disconnected!" });
     client.destroy();
-    // client.initialize();
-
+    createOrUpdateSessionOnRemote(id, "connected", client, "delete");
     // Menghapus pada file sessions
     const savedSessions = getSessionsFile();
     const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
     savedSessions.splice(sessionIndex, 1);
     setSessionsFile(savedSessions);
-
     io.emit("remove-session", id);
   });
 
-  // Tambahkan client ke sessions
-  sessions.push({
-    id: id,
-    description: description,
-    client: client,
-  });
-
-  // Menambahkan session ke file
-  const savedSessions = getSessionsFile();
-  const sessionIndex = savedSessions.findIndex((sess) => sess.id == id);
-
-  if (sessionIndex == -1) {
-    savedSessions.push({
-      id: id,
-      description: description,
-      ready: false,
-    });
-    setSessionsFile(savedSessions);
-  }
+  // if (sessionIndex == -1) {
+  // setSessionsFile(savedSessions);
+  createOrUpdateSessionOnRemote(id, "connected", client, null);
+  // }
 };
 
-const init = function (socket) {
+const init = async function (socket) {
   const savedSessions = getSessionsFile();
 
+  const savedSessionInMongo = await getSessionsRemote();
+  if (savedSessionInMongo.length > 0) {
+    if (socket) {
+      savedSessionInMongo.forEach((e, i, arr) => {
+        arr[i].ready = false;
+      });
+      socket.emit("init", savedSessionInMongo);
+    } else {
+      savedSessionInMongo.forEach((sess) => {
+        createSession(sess?.id, sess?.description, socket);
+      });
+    }
+  }
   if (savedSessions.length > 0) {
     if (socket) {
       /**
@@ -163,19 +229,8 @@ const init = function (socket) {
   }
 };
 
-// init();
-
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
-  init(socket);
-  socket.on("join_room", (data) => {
-    console.log(data);
-    socket.join(data);
-  });
-
-  socket.on("send_message", (data) => {
-    socket.to(data.room).emit("receive_message", data);
-  });
   init(socket);
 
   socket.on("create-session", function (data) {
@@ -193,7 +248,39 @@ app.get("/getChats/:sessionid", async (req, res) => {
     const session = sessions.find((sess) => sess.id == sessionid);
     const client = session.client;
     const chats = await client.getChats();
-    res.send(chats);
+    const groups = chats.filter((chat) => chat.isGroup);
+
+    // only get the groups where the user is admin
+    const adminGroups = groups.filter((group) => {
+      const data = group.participants.find(
+        (a) => a?.id?._serialized == client?.info?.wid?._serialized
+      );
+      if (data?.isAdmin || data?.isSuperAdmin) return data;
+    });
+
+    res.send(adminGroups);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+app.get("/connectGroupToUsersAccount/:sessionid/:groupid", async (req, res) => {
+  try {
+    const sessionid = req.params.sessionid;
+    const groupid = req.params.groupid;
+    const sessions = await sessionsModel.findOneAndUpdate(
+      {
+        id: sessionid,
+      },
+      {
+        groupid: groupid,
+      }
+    );
+
+    const allSessions = await sessionsModel.find();
+    sessions = [...allSessions];
+    listenToObjects(mongoose, sessions);
+    res.json(sessions);
   } catch (error) {
     console.log(error);
   }
@@ -207,7 +294,8 @@ app.get("/getAllChatsOfGroup/:sessionid/:nameOfTheGroup", async (req, res) => {
     const session = sessions.find((sess) => sess.id == sessionid);
     const client = session.client;
     const chats = await client.getChats();
-    // TODO: later on use the name of the group from the frontend
+    //get all groups
+
     const group = chats.find((chat) => chat.name == "Boys Fam 🤩");
     const groupChats = await group.fetchMessages();
     res.send(groupChats);
@@ -223,8 +311,9 @@ app.get(
       const sessionid = req.params.sessionid;
       const groupname = req.params.groupname;
       const messageid = req.params.messageid;
-      const session = sessions.find((sess) => sess.id == sessionid);
-      const client = session.client;
+      const session = sessionsModel.find((sess) => sess.id == sessionid);
+      const client = getClientForMongoSession(session);
+      // const client = session.client;
       const chats = await client.getChats();
 
       const group = chats.find((chat) => chat.name == "Boys Fam 🤩");
@@ -243,5 +332,3 @@ app.get(
 server.listen(3001, () => {
   console.log("SERVER IS RUNNING");
 });
-
-app.get("getMessageInfo");

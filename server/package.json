@@ -9,8 +9,10 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.17.3",
+    "mongoose": "^6.9.1",
     "nodemon": "^2.0.15",
     "socket.io": "^4.4.1",
-    "whatsapp-web.js": "^1.19.4"
+    "whatsapp-web.js": "^1.19.4",
+    "wwebjs-mongo": "^1.1.0"
   }
 }
